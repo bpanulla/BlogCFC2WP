@@ -1,0 +1,14 @@
+This project is based on the original work of James Netherton, as published on
+his blog at:
+
+http://www.jamesnetherton.com/blog/2007/11/17/Converting-BlogCFC-to-Wordpress
+	
+and released under LGPL (see license.txt).
+
+My contributions are to bring this converter up to speed with BlogCFC version
+5.9.3.006 and WordPress version 2.9.2 and add a little more precision to the
+migration. This is the current production release of WordPress and a minor
+release back of BlogCFC as of this writing. [BP 3/14/10]
+
+A copy of the blog post describing use of the original version from James'
+blog can be found in the docs folder as a PDF.

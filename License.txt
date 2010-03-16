@@ -1,0 +1,5 @@
+LICENSE 
+Copyright 2007 James Netherton
+http://www.opensource.org/licenses/lgpl-license.php
+
+http://www.jamesnetherton.com
