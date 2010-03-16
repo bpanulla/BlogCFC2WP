@@ -41,7 +41,6 @@
 										   posts.body,
 										   posts.title,
 										   posts.alias,
-										   categoryMappings[posts.categoryidfk],
 										   posts.released,
 										   posts.allowcomments,
 										   postURL,
@@ -49,6 +48,18 @@
 
 	<cfset commentsImported += posts.commentCount/>
 
+	<!--- Migrate Category Links --->
+	<cfset categoryLinks = queryHelper.getPostCategories(posts.id)/>
+
+	<cfif categoryLinks.recordCount>
+		<cfloop query="categoryLinks">
+			<cfset queryHelper.insertCategoryLink(postId,
+											 categoryMappings[categoryLinks.categoryidfk],
+											 categoryLinks.currentRow)/>
+		
+		</cfloop>
+	</cfif>
+	
 	<!--- Migrate Comments --->
 
 	<cfset comments = queryHelper.getPostComments(posts.id)/>

@@ -16,8 +16,8 @@
 				categoryid,
 				count(categoryname) as categoryCount
 			FROM
-				tblblogCategories
-			INNER JOIN tblblogEntriesCategories ON (categoryidfk = categoryid)
+				tblblogcategories
+			INNER JOIN tblblogentriescategories ON (categoryidfk = categoryid)
 			GROUP BY
 				categoryname
   	</cfquery>
@@ -32,20 +32,33 @@
 
 		<cfquery name="posts" datasource="#request.blogcfcDSN#">
 			SELECT
-				tblBlogEntries.*,
-				tblblogEntriesCategories.categoryidfk,
-				count(tblblogComments.id) as commentCount
+				tblblogentries.*,
+				(SELECT count(*) FROM tblblogcomments WHERE tblblogcomments.entryidfk = tblblogentries.id) as commentCount
 			FROM
-				tblBlogEntries
-			INNER JOIN tblblogEntriesCategories ON (entryidfk = id)
-			LEFT JOIN tblblogComments ON (tblblogComments.entryidfk = tblBlogEntries.id)
-			GROUP BY
-				tblBlogEntries.id
+				tblblogentries
 			ORDER BY
-				released ASC
+				released ASC, posted ASC
 		</cfquery>
 
 		<cfreturn posts/>
+
+	</cffunction>
+
+	<cffunction name="getPostCategories" returntype="query" output="false">
+		<cfargument name="postId" type="string" required="true"/>
+
+		<cfset var categories = ""/>
+
+		<cfquery name="categories" datasource="#request.blogcfcDSN#">
+			SELECT
+				*
+			FROM
+				tblblogentriescategories
+			WHERE
+				entryidfk = <cfqueryparam value="#arguments.postId#" cfsqltype="cf_sql_varchar"/>
+		</cfquery>
+
+		<cfreturn categories/>
 
 	</cffunction>
 
@@ -58,7 +71,7 @@
 			SELECT
 				*
 			FROM
-				tblBlogComments
+				tblblogcomments
 			WHERE
 				entryidfk = <cfqueryparam value="#arguments.postId#" cfsqltype="cf_sql_varchar"/>
 		</cfquery>
@@ -110,24 +123,23 @@
 		<cfargument name="post_content" type="string" required="true"/>
 		<cfargument name="post_title" type="string" required="true"/>
 		<cfargument name="post_name" type="string" required="true"/>
-		<cfargument name="post_category" type="numeric" required="true"/>
 		<cfargument name="post_status" type="numeric" required="true"/>
 		<cfargument name="comment_status" type="numeric" required="true"/>
 		<cfargument name="guid" type="string" required="yes"/>
 		<cfargument name="comment_count" type="numeric" required="yes"/>
 
 		<cfset var result = ""/>
+		<cfset var dtFormat = "yyyy-mm-dd HH:mm:ss" />
 
 		<cfquery datasource="#request.wpDSN#" result="result">
 			INSERT INTO #request.wpTablePrefix#posts VALUES
 			(
 				<cfqueryparam value="0" cfsqltype="cf_sql_integer"/>,
 				<cfqueryparam value="1" cfsqltype="cf_sql_integer"/>, 							                                  <!--- post_author --->
-				<cfqueryparam value="#dateFormat(arguments.post_date,"yyyy-mm-dd HH:mm:ss")#" cfsqltype="cf_sql_timestamp"/>, 			                                  <!--- post_date --->
-				<cfqueryparam value="#dateFormat(addGmtOffset(arguments.post_date),"yyyy-mm-dd HH:mm:ss")#" cfsqltype="cf_sql_timestamp"/>,                              <!--- post_date_gmt --->
+				<cfqueryparam value="#dateFormat(arguments.post_date,dtFormat)#" cfsqltype="cf_sql_timestamp"/>, 			      <!--- post_date --->
+				<cfqueryparam value="#dateFormat(addGmtOffset(arguments.post_date),dtFormat)#" cfsqltype="cf_sql_timestamp"/>,    <!--- post_date_gmt --->
 				<cfqueryparam value="#arguments.post_content#" cfsqltype="cf_sql_longvarchar"/>,                                  <!--- post_content --->
 				<cfqueryparam value="#arguments.post_title#" cfsqltype="cf_sql_varchar"/>, 		                                  <!--- post_title  --->
-				<cfqueryparam value="#arguments.post_category#" cfsqltype="cf_sql_integer"/>, 	                                  <!--- post_category  --->
 				<cfqueryparam value="" cfsqltype="cf_sql_varchar"/>, 							                                  <!--- post_excerpt --->
 				<cfqueryparam value="#iif(arguments.post_status eq 1, de('publish'), de('draft'))#" cfsqltype="cf_sql_varchar"/>, <!--- post_status --->
 				<cfqueryparam value="#iif(arguments.post_status eq 1, de('open'), de('closed'))#" cfsqltype="cf_sql_varchar"/>,   <!--- comment_status --->
@@ -148,18 +160,26 @@
 			)
 		</cfquery>
 
-		<cfquery datasource="#request.wpDSN#">
-			INSERT INTO #request.wpTablePrefix#term_relationships VALUES
-			(
-				<cfqueryparam value="#result[request.queryLastId]#" cfsqltype="cf_sql_integer"/>, <!--- object_id --->
-				<cfqueryparam value="#arguments.post_category#" cfsqltype="cf_sql_integer"/>,	  <!--- term_taxonomy_id --->
-				0
-			)
-		</cfquery>
-
 		<cfreturn result[request.queryLastId]/>
 
 	</cffunction>
+
+	<cffunction name="insertCategoryLink" returntype="void" output="false">
+		<cfargument name="post_ID" type="numeric" required="true"/>
+		<cfargument name="category_ID" type="string" required="true"/>
+		<cfargument name="category_order" type="numeric" required="true"/>
+	
+		<cfquery datasource="#request.wpDSN#">
+			INSERT INTO #request.wpTablePrefix#term_relationships VALUES
+			(
+				<cfqueryparam value="#arguments.post_ID#" cfsqltype="cf_sql_integer"/>, <!--- object_id --->
+				<cfqueryparam value="#arguments.category_ID#" cfsqltype="cf_sql_integer"/>,	  <!--- term_taxonomy_id --->
+				<cfqueryparam value="#arguments.category_order#" cfsqltype="cf_sql_integer"/> <!--- term_order --->
+			)
+		</cfquery>
+
+	</cffunction>
+
 
 	<cffunction name="insertComment" returntype="void" output="false">
 		<cfargument name="comment_post_ID" type="numeric" required="true"/>
